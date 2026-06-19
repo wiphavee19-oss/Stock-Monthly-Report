@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="th" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Stock Report - Energy Dynamics</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js CDN for robust offline-ready charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PapaParse CDN for parsing CSV on client side -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Custom styling to ensure smooth transition -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Sarabun', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-200">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm"></div>
+
+    <div id="app" class="flex flex-col min-h-screen">
+        <!-- --- HEADER --- -->
+        <header class="sticky top-0 z-40 px-6 py-4 border-b bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 backdrop-blur-md transition-colors flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-brand-600 text-white p-2.5 rounded-xl shadow-lg shadow-brand-500/20">
+                    <i data-lucide="package" class="w-6 h-6 animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">
+                        Monthly Stock Report
+                        <span id="header-badge" class="text-xs font-normal px-2.5 py-1 bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-300 rounded-full">
+                            ข้อมูลเดือน พฤษภาคม 2026
+                        </span>
+                    </h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">แดชบอร์ดสรุปยอด วิเคราะห์สต๊อกคงเหลือสูงสุด-ต่ำสุด และประวัติรับเข้าจ่ายออกแบบโต้ตอบได้</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <div class="text-right flex flex-col mr-2">
+                    <span class="text-[10px] text-slate-400 font-medium">Prepared by:</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-slate-100">MS. WIPHAVEE J.</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Marketing Executive</span>
+                    <span class="text-[10px] text-brand-600 dark:text-brand-400 font-semibold">Energy Dynamics (Thailand) Co.,Ltd.</span>
+                </div>
+                <button onclick="toggleDarkMode()" class="p-2.5 rounded-lg border bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 dark:text-amber-400 transition-all" title="เปลี่ยนโหมดสี">
+                    <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+                    <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- --- NAVIGATION & CONTROL BAR --- -->
+        <div class="px-6 py-3 border-b bg-slate-100/50 border-slate-200 dark:bg-slate-900 dark:border-slate-800 flex flex-wrap gap-2 items-center justify-between transition-colors">
+            <div class="flex space-x-1">
+                <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-btn active flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all bg-brand-600 text-white shadow-md shadow-brand-500/10">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                    <span>แดชบอร์ดสรุป</span>
+                </button>
+                <button onclick="switchTab('inventory')" id="btn-inventory" class="nav-btn flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800">
+                    <i data-lucide="list-collapse" class="w-4 h-4"></i>
+                    <span>ตารางสินค้าคงเหลือ</span>
+                </button>
+                <button onclick="switchTab('transactions')" id="btn-transactions" class="nav-btn flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    <span>ประวัติรายการ In-Out</span>
+                </button>
+                <button onclick="switchTab('upload')" id="btn-upload" class="nav-btn flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
+                    <i data-lucide="upload-cloud" class="w-4 h-4 text-amber-500"></i>
+                    <span>อัปโหลด CSV 💡</span>
+                </button>
+            </div>
+
+            <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-2 sm:mt-0">
+                <i data-lucide="calendar" class="w-4 h-4"></i>
+                <span id="current-date">สถานะ: แสดงข้อมูลประจำเดือน พฤษภาคม 2026</span>
+            </div>
+        </div>
+
+        <!-- --- MAIN CONTENT --- -->
+        <main class="p-6 max-w-7xl mx-auto w-full flex-grow space-y-6">
+
+            <!-- ============================== -->
+            <!-- SECTION 1: DASHBOARD TAB       -->
+            <!-- ============================== -->
+            <div id="tab-dashboard-content" class="tab-content space-y-6">
+                <!-- KPI Status Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Total Balance -->
+                    <div class="p-5 rounded-2xl border bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
+                        <div class="flex justify-between items-start">
+                          <div class="p-3 bg-brand-500/10 text-brand-600 rounded-xl">
+                            <i data-lucide="package"></i>
+                          </div>
+                          <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600">คงคลังสุทธิ</span>
+                        </div>
+                        <div class="mt-4">
+                          <span id="kpi-balance" class="text-3xl font-extrabold tracking-tight">0</span>
+                          <span class="text-xs text-slate-400 ml-1.5">ชิ้น</span>
+                          <h3 class="text-sm font-medium text-slate-400 mt-1">สินค้าคงเหลือทั้งหมด</h3>
+                        </div>
+                    </div>
+                    <!-- Total Inflow -->
+                    <div class="p-5 rounded-2xl border bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
+                        <div class="flex justify-between items-start">
+                          <div class="p-3 bg-emerald-500/10 text-emerald-600 rounded-xl">
+                            <i data-lucide="arrow-up-right"></i>
+                          </div>
+                          <span id="kpi-inflow-percent" class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">รับเข้า</span>
+                        </div>
+                        <div class="mt-4">
+                          <span id="kpi-in" class="text-3xl font-extrabold tracking-tight text-emerald-500">+0</span>
+                          <span class="text-xs text-slate-400 ml-1.5">ชิ้น</span>
+                          <h3 class="text-sm font-medium text-slate-400 mt-1">ยอดรวมนำเข้าสินค้า (In)</h3>
+                        </div>
+                    </div>
+                    <!-- Total Outflow -->
+                    <div class="p-5 rounded-2xl border bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
+                        <div class="flex justify-between items-start">
+                          <div class="p-3 bg-rose-500/10 text-rose-600 rounded-xl">
+                            <i data-lucide="arrow-down-left"></i>
+                          </div>
+                          <span id="kpi-outflow-percent" class="text-xs font-semibold px-2 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">จ่ายออก</span>
+                        </div>
+                        <div class="mt-4">
+                          <span id="kpi-out" class="text-3xl font-extrabold tracking-tight text-rose-500">-0</span>
+                          <span class="text-xs text-slate-400 ml-1.5">ชิ้น</span>
+                          <h3 class="text-sm font-medium text-slate-400 mt-1">ยอดจำหน่ายออก (Out)</h3>
+                        </div>
+                    </div>
+                    <!-- Total BF -->
+                    <div class="p-5 rounded-2xl border bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
+                        <div class="flex justify-between items-start">
+                          <div class="p-3 bg-amber-500/10 text-amber-600 rounded-xl">
+                            <i data-lucide="trending-up"></i>
+                          </div>
+                          <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">ยอดยกมา</span>
+                        </div>
+                        <div class="mt-4">
+                          <span id="kpi-bf" class="text-3xl font-extrabold tracking-tight">0</span>
+                          <span class="text-xs text-slate-400 ml-1.5">ชิ้น</span>
+                          <h3 class="text-sm font-medium text-slate-400 mt-1">ยอดยกมา (B/F)</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SPOTLIGHT HIGHLIGHTS (มากที่สุด - น้อยที่สุด) -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Top Available (คงคลังสูงสุด) -->
+                    <div class="p-6 rounded-2xl border bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2.5 h-6 bg-brand-500 rounded-full"></div>
+                                <h2 class="text-base font-bold">📦 สินค้าคงเหลือสูงสุด  (Most Stock)</h2>
+                            </div>
+                            <span class="text-xs text-slate-400">สัดส่วนสำคัญ</span>
+                        </div>
+                        <div id="top-stock-container" class="space-y-4">
+                            <!-- Dynamic Content Inserted Here -->
+                        </div>
+                    </div>
+
+                    <!-- Low Stock Alert (คงคลังต่ำสุด / ใกล้หมด) -->
+                    <div class="p-6 rounded-2xl border bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2.5 h-6 bg-amber-500 rounded-full"></div>
+                                <h2 class="text-base font-bold">⚠️ สินค้าคงเหลือ  (Low Stock Alert)</h2>
+                            </div>
+                            <span class="text-xs text-amber-500 font-semibold flex items-center gap-1">
+                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> 
+                            </span>
+                        </div>
+                        <div id="low-stock-container" class="space-y-4">
+                            <!-- Dynamic Content Inserted Here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VISUAL CHARTS -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Chart 1: Bar Chart of main items -->
+                    <div class="lg:col-span-2 p-6 rounded-2xl border bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
+                        <h3 class="text-xs font-bold text-slate-400 mb-1">MOVEMENTS ANALYSIS</h3>
+                        <h2 class="text-base font-bold mb-4">การเคลื่อนไหวของแผงโซล่าเซลล์รุ่นหลัก</h2>
+                        <div class="relative w-full h-80">
+                            <canvas id="barMovementChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: Doughnut Chart -->
+                    <div class="p-6 rounded-2xl border bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-400 mb-1">STOCK SPLIT</h3>
+                            <h2 class="text-base font-bold mb-4">สัดส่วนสินค้าในสต๊อก</h2>
+                            <div class="relative w-full h-56 flex items-center justify-center">
+                                <canvas id="pieCategoryChart"></canvas>
+                            </div>
+                        </div>
+                        <!-- Color Legend Info -->
+                        <div id="category-legend" class="space-y-2 mt-4 text-xs">
+                            <!-- Legend will render dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================== -->
+            <!-- SECTION 2: INVENTORY TABLE TAB -->
+            <!-- ============================== -->
+            <div id="tab-inventory-content" class="tab-content hidden space-y-4">
+                <div class="p-6 rounded-2xl border bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                        <div>
+                          <h2 class="text-lg font-bold">📦 รายการสินค้าปัจจุบัน</h2>
+                          <p class="text-xs text-slate-400">รายการสินค้าเข้า-ออก</p>
+                        </div>
+                        
+                        <!-- Filters -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- Search -->
+                            <div class="relative">
+                                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                                <input type="text" id="search-input" onkeyup="filterStockTable()" placeholder="ค้นหาชื่อสินค้า..." class="pl-9 pr-4 py-2 text-xs rounded-lg border outline-none w-48 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:border-brand-500">
+                            </div>
+                            <!-- Category Filter -->
+                            <select id="filter-category" onchange="filterStockTable()" class="px-3 py-2 text-xs rounded-lg border bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 outline-none">
+                                <option value="All">ทุกกลุ่มสินค้า</option>
+                                <option value="Solar Panel">Solar Panel</option>
+                                <option value="Inverter">Inverter</option>
+                                <option value="Accessory">Accessory</option>
+                            </select>
+                            <!-- Alert Level Filter -->
+                            <select id="filter-level" onchange="filterStockTable()" class="px-3 py-2 text-xs rounded-lg border bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 outline-none">
+                                <option value="All">ทุกสถานะ</option>
+                                <option value="High">สินค้ามีมาก (&ge; 3000 ชิ้น)</option>
+                                <option value="Normal">ปกติ</option>
+                                <option value="Low Stock">สั่งเพิ่ม (&le; 5 ชิ้น)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 custom-scrollbar">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 dark:bg-slate-800/50 text-slate-400 text-xs font-bold uppercase">
+                                    <th class="px-5 py-3">ชื่อสินค้า (Product Name)</th>
+                                    <th class="px-5 py-3">หมวดหมู่</th>
+                                    <th class="px-5 py-3 text-right">ยกมา (B/F)</th>
+                                    <th class="px-5 py-3 text-right text-emerald-500">นำเข้า (+)</th>
+                                    <th class="px-5 py-3 text-right text-rose-500">จ่ายออก (-)</th>
+                                    <th class="px-5 py-3 text-right font-bold">คงเหลือ (Balance)</th>
+                                    <th class="px-5 py-3 text-center">สถานะสต๊อก</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table-body" class="divide-y divide-slate-100 dark:divide-slate-800">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================== -->
+            <!-- SECTION 3: TRANSACTION LOGS TAB-->
+            <!-- ============================== -->
+            <div id="tab-transactions-content" class="tab-content hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Stock In Logs -->
+                <div class="p-6 rounded-2xl border bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg">
+                                <i data-lucide="arrow-up-right"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-bold">🟢 บันทึกการรับเข้า (Stock In History)</h2>
+                                <p class="text-xs text-slate-400">รายการรับเข้าล่าสุดและข้อมูล</p>
+                            </div>
+                        </div>
+                        <span id="count-in-logs" class="text-xs px-2.5 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 font-bold rounded-md">0 รายการ</span>
+                    </div>
+                    <div id="stock-in-logs-container" class="space-y-3 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
+                        <!-- Dynamic Logs -->
+                    </div>
+                </div>
+
+                <!-- Stock Out Logs -->
+                <div class="p-6 rounded-2xl border bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="p-2 bg-rose-500/10 text-rose-600 rounded-lg">
+                                <i data-lucide="arrow-down-left"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-bold">🔴 บันทึกการส่งออก (Stock Out History)</h2>
+                                <p class="text-xs text-slate-400">ประวัติการจัดส่งและข้อมูลผู้รับ</p>
+                            </div>
+                        </div>
+                        <span id="count-out-logs" class="text-xs px-2.5 py-1 bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200 font-bold rounded-md">0 รายการ</span>
+                    </div>
+                    <div id="stock-out-logs-container" class="space-y-3 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
+                        <!-- Dynamic Logs -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================== -->
+            <!-- SECTION 4: FILE UPLOAD CENTER -->
+            <!-- ============================== -->
+            <div id="tab-upload-content" class="tab-content hidden space-y-6">
+                <!-- Instruction Panel -->
+                <div class="p-6 rounded-2xl border bg-gradient-to-r from-blue-500/10 to-amber-500/10 border-blue-500/20 dark:from-slate-900 dark:to-slate-900/50 dark:border-slate-800 shadow-sm">
+                    <div class="flex items-start gap-4">
+                        <div class="p-3 bg-amber-500 text-white rounded-xl">
+                            <i data-lucide="help-circle" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold">📂 คู่มือการอัปโหลดไฟล์รายงาน .CSV เพื่ออัปเดตข้อมูล</h2>
+                            <p class="text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                                แดชบอร์ดนี้ทำขึ้นเพื่อแสดงผลข้อมูลคลังสินค้าโดยตรงจากไฟล์ รายงานสต๊อกประจำเดือน 
+                                คุณสามารถดึงไฟล์ <strong>.CSV</strong> ที่แชร์จาก Excel/Sheets แล้วอัปโหลดเข้ามาเพื่อดูสถิติใหม่ได้โดยตรง ข้อมูลทุกอย่างจะได้รับการประมวลผลบนเครื่องของคุณอย่างปลอดภัย (ไม่มีการบันทึกกลับไปยังคลาวด์ภายนอก)
+                            </p>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                <div class="bg-white/80 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                                    <span class="font-bold text-blue-600">1. ไฟล์ Stockหลัก.csv</span>
+                                    <p class="text-slate-500 mt-1">ต้องมีหัวข้อคอลัมน์ชื่อ <code>Product Name</code>, <code>B/F</code>, <code>In</code>, <code>Out</code>, <code>Balance</code></p>
+                                </div>
+                                <div class="bg-white/80 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                                    <span class="font-bold text-emerald-600">2. ไฟล์ Stock In (รับเข้า).csv</span>
+                                    <p class="text-slate-500 mt-1">ต้องมีคอลัมน์ <code>Date</code>, <code>Product Name</code>, <code>Qty</code> และ <code>Lot. No.</code></p>
+                                </div>
+                                <div class="bg-white/80 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                                    <span class="font-bold text-rose-600">3. ไฟล์ Stock Out (จ่ายออก).csv</span>
+                                    <p class="text-slate-500 mt-1">ต้องมีคอลัมน์ <code>Date</code>, <code>Product Name</code>, <code>Qty</code>, <code>Customer</code>, <code>DO</code></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drag-Drop Boxes -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Drop Box 1: Stock.csv -->
+                    <div class="p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 text-center flex flex-col justify-center items-center hover:border-brand-500 transition-colors group relative cursor-pointer">
+                        <input type="file" id="file-stock" accept=".csv" onchange="handleFileSelect('stock', this)" class="absolute inset-0 opacity-0 cursor-pointer">
+                        <div class="p-4 bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-full group-hover:scale-110 transition-transform mb-3">
+                            <i data-lucide="file-spreadsheet" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="font-bold text-sm">1. อัปโหลดไฟล์สต๊อกคงเหลือหลัก</h3>
+                        <p class="text-xs text-slate-400 mt-1">คลิกหรือลากไฟล์ [Stock.csv] วางที่นี่</p>
+                        <span id="status-stock" class="mt-3 px-2.5 py-1 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-[10px] rounded-md font-bold">ข้อมูลตั้งต้นถูกโหลดอยู่</span>
+                    </div>
+
+                    <!-- Drop Box 2: Stock In.csv -->
+                    <div class="p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 text-center flex flex-col justify-center items-center hover:border-emerald-500 transition-colors group relative cursor-pointer">
+                        <input type="file" id="file-in" accept=".csv" onchange="handleFileSelect('in', this)" class="absolute inset-0 opacity-0 cursor-pointer">
+                        <div class="p-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full group-hover:scale-110 transition-transform mb-3">
+                            <i data-lucide="package-plus" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="font-bold text-sm">2. อัปโหลดรายการสินค้าเข้า (Stock In)</h3>
+                        <p class="text-xs text-slate-400 mt-1">คลิกหรือลากไฟล์ [Stock In.csv] วางที่นี่</p>
+                        <span id="status-in" class="mt-3 px-2.5 py-1 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-[10px] rounded-md font-bold">ข้อมูลตั้งต้นถูกโหลดอยู่</span>
+                    </div>
+
+                    <!-- Drop Box 3: Stock Out.csv -->
+                    <div class="p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 text-center flex flex-col justify-center items-center hover:border-rose-500 transition-colors group relative cursor-pointer">
+                        <input type="file" id="file-out" accept=".csv" onchange="handleFileSelect('out', this)" class="absolute inset-0 opacity-0 cursor-pointer">
+                        <div class="p-4 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-full group-hover:scale-110 transition-transform mb-3">
+                            <i data-lucide="package-minus" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="font-bold text-sm">3. อัปโหลดรายการสินค้าออก (Stock Out)</h3>
+                        <p class="text-xs text-slate-400 mt-1">คลิกหรือลากไฟล์ [Stock Out.csv] วางที่นี่</p>
+                        <span id="status-out" class="mt-3 px-2.5 py-1 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-[10px] rounded-md font-bold">ข้อมูลตั้งต้นถูกโหลดอยู่</span>
+                    </div>
+                </div>
+
+                <!-- Reset Button -->
+                <div class="flex justify-center">
+                    <button onclick="resetToDefaultData()" class="flex items-center gap-2 px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 rounded-lg text-sm transition-all font-semibold shadow-sm">
+                        <i data-lucide="undo" class="w-4 h-4"></i>
+                        <span>ล้างข้อมูลที่อัปโหลดและใช้ค่าดั้งเดิมพฤษภาคม 2026</span>
+                    </button>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- --- FOOTER --- -->
+        <footer class="mt-auto py-8 border-t bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500 transition-colors">
+            <p class="font-semibold">© 2026 Energy Dynamics (Thailand) Co.,Ltd. All Rights Reserved.</p>
+            <p class="mt-1">ออกแบบหน้าต่างวิเคราะห์และระบบประมวลผล CSV สำหรับเปิดใช้งานออฟไลน์บนเครื่องคอมพิวเตอร์ของคุณแบบเรียลไทม์</p>
+        </footer>
+    </div>
+
+    <!-- --- JAVASCRIPT SYSTEM LOGIC --- -->
+    <script>
+        // --- 1. DEFAULT DATASET (FOR OUT OF BOX RUNNING) ---
+        const DEFAULT_STOCK_DATA = [
+            { "Product Name": "REC410TP5", "BF": 98, "In": 0, "Out": 8, "Balance": 90, "Type": "Solar Panel" },
+            { "Product Name": "CS6W-555MS", "BF": 448, "In": 0, "Out": 168, "Balance": 280, "Type": "Solar Panel" },
+            { "Product Name": "CS7L-630TB-AG", "BF": 316, "In": 0, "Out": 33, "Balance": 283, "Type": "Solar Panel" },
+            { "Product Name": "CS7N-705TB-AG", "BF": 178, "In": 0, "Out": 15, "Balance": 163, "Type": "Solar Panel" },
+            { "Product Name": "CS7N-715TB-AG", "BF": 747, "In": 131, "Out": 202, "Balance": 676, "Type": "Solar Panel" },
+            { "Product Name": "CS7N-720TB-AG", "BF": 2516, "In": 297, "Out": 492, "Balance": 2321, "Type": "Solar Panel" },
+            { "Product Name": "SMA SUNNY BOY 3 kW", "BF": 1, "In": 0, "Out": 0, "Balance": 1, "Type": "Inverter" },
+            { "Product Name": "SMA SUNNY BOY 5 kW", "BF": 3, "In": 0, "Out": 0, "Balance": 3, "Type": "Inverter" },
+            { "Product Name": "SUN2000-5K-MAP0", "BF": 0, "In": 2, "Out": 0, "Balance": 2, "Type": "Inverter" },
+            { "Product Name": "SUN2000-5K-LB0", "BF": 0, "In": 3, "Out": 0, "Balance": 3, "Type": "Inverter" },
+            { "Product Name": "Huawei SDONGLEA-05(AP+STA)", "BF": 0, "In": 5, "Out": 0, "Balance": 5, "Type": "Accessory" },
+            { "Product Name": "Huawei DTSU666-H ", "BF": 1, "In": 2, "Out": 2, "Balance": 1, "Type": "Accessory" },
+            { "Product Name": "DC-SPD-KIT-10", "BF": 4, "In": 0, "Out": 0, "Balance": 4, "Type": "Accessory" },
+            { "Product Name": "Recap Surge Protection", "BF": 14, "In": 0, "Out": 0, "Balance": 14, "Type": "Accessory" },
+            { "Product Name": "Phoenix Power Supply", "BF": 9, "In": 0, "Out": 0, "Balance": 9, "Type": "Accessory" },
+            { "Product Name": "SMA Power Supply", "BF": 2, "In": 0, "Out": 0, "Balance": 2, "Type": "Accessory" },
+            { "Product Name": "SMA Energy Meter", "BF": 2, "In": 0, "Out": 0, "Balance": 2, "Type": "Accessory" },
+            { "Product Name": "CS3W-435MS", "BF": 1, "In": 0, "Out": 0, "Balance": 1, "Type": "Solar Panel" },
+            { "Product Name": "CS7N-705TB-AG (TIT)", "BF": 7, "In": 0, "Out": 2, "Balance": 5, "Type": "Solar Panel" },
+            { "Product Name": "CS6W-555MS (TIT)", "BF": 5, "In": 0, "Out": 0, "Balance": 5, "Type": "Solar Panel" },
+            { "Product Name": "REC440 (not for sale)", "BF": 6, "In": 0, "Out": 0, "Balance": 6, "Type": "Solar Panel" },
+            { "Product Name": "Inverter (STP50-41)", "BF": 6, "In": 0, "Out": 0, "Balance": 6, "Type": "Inverter" },
+            { "Product Name": "CS3W-450MS", "BF": 3, "In": 0, "Out": 0, "Balance": 3, "Type": "Solar Panel" },
+            { "Product Name": "CS6W-565TB", "BF": 6, "In": 0, "Out": 0, "Balance": 6, "Type": "Solar Panel" }
+        ];
+
+        const DEFAULT_STOCK_IN_HISTORY = [
+            { "Date": "2026-05-12", "ProductName": "CS7N-715TB-AG", "LotNo": "L-091A", "Qty": 131, "Remark": "นําเข้าคลังปกติ" },
+            { "Date": "2026-05-12", "ProductName": "CS7N-720TB-AG", "LotNo": "L-091B", "Qty": 297, "Remark": "นําเข้าคลังปกติ" },
+            { "Date": "2026-05-25", "ProductName": "SUN2000-5K-MAP0", "LotNo": "HW-M1", "Qty": 2, "Remark": "นําเข้าคลังปกติ" },
+            { "Date": "2026-05-25", "ProductName": "Huawei SDONGLEA-05(AP+STA)", "LotNo": "HW-S1", "Qty": 5, "Remark": "นําเข้าคลังปกติ" },
+            { "Date": "2026-05-25", "ProductName": "Huawei DTSU666-H", "LotNo": "HW-D1", "Qty": 2, "Remark": "นําเข้าคลังปกติ" },
+            { "Date": "2026-05-26", "ProductName": "SUN2000-5K-LB0", "LotNo": "HW-L1", "Qty": 3, "Remark": "นําเข้าคลังปกติ" }
+        ];
+
+        const DEFAULT_STOCK_OUT_HISTORY = [
+            { "Date": "2026-05-06", "ProductName": "CS6W-555MS", "Qty": 12, "Customer": "เจ ทริปเปิ้ล จี เทคโนโลยี", "DO": "36DO-690067" },
+            { "Date": "2026-05-06", "ProductName": "Huawei DTSU666-H ", "Qty": 1, "Customer": "เจ ทริปเปิ้ล จี เทคโนโลยี", "DO": "36DO-690067" },
+            { "Date": "2026-05-06", "ProductName": "REC410TP5", "Qty": 8, "Customer": "ซีดีดี เอ็นจิเนียริง แอนด์ ซัพพลาย", "DO": "36DO-690068" },
+            { "Date": "2026-05-07", "ProductName": "CS7N-720TB-AG", "Qty": 9, "Customer": "อาร์ทีดีซี", "DO": "36DO-690069" },
+            { "Date": "2026-05-07", "ProductName": "CS7N-720TB-AG", "Qty": 9, "Customer": "อาร์ทีดีซี", "DO": "36DO-690070" },
+            { "Date": "2026-05-07", "ProductName": "CS6W-555MS", "Qty": 1, "Customer": "P.E.W. Co., Ltd.", "DO": "36DO-690071" },
+            { "Date": "2026-05-11", "ProductName": "CS7N-720TB-AG", "Qty": 8, "Customer": "บีจี โซล่าร์ สมาร์ท เนเนอร์ยี่", "DO": "36DO-690072" },
+            { "Date": "2026-05-11", "ProductName": "CS6W-555MS", "Qty": 5, "Customer": "พิตติธรรศ จำกัด", "DO": "36DO-690074" },
+            { "Date": "2026-05-12", "ProductName": "CS7N-715TB-AG", "Qty": 56, "Customer": "อีวีเอสบีโซลาร์", "DO": "36DO-690073" },
+            { "Date": "2026-05-13", "ProductName": "CS7N-715TB-AG", "Qty": 24, "Customer": "หจก.ฮาลาลแอนด์โค", "DO": "36DO-690075" },
+            { "Date": "2026-05-14", "ProductName": "CS7N-720TB-AG", "Qty": 150, "Customer": "บริษัท 36คอนเน็ค จากัด", "DO": "36DO-690080" },
+            { "Date": "2026-05-14", "ProductName": "CS7L-630TB-AG", "Qty": 33, "Customer": "Future Green Engineering", "DO": "36DO-690076" },
+            { "Date": "2026-05-14", "ProductName": "CS7N-705TB-AG", "Qty": 15, "Customer": "Future Green Engineering", "DO": "36DO-690076" },
+            { "Date": "2026-05-14", "ProductName": "CS7N-715TB-AG", "Qty": 16, "Customer": "Future Green Engineering", "DO": "36DO-690076" },
+            { "Date": "2026-05-15", "ProductName": "CS6W-555MS", "Qty": 12, "Customer": "เจ ทริปเปิ้ล จี เทคโนโลยี", "DO": "36DO-690077" },
+            { "Date": "2026-05-16", "ProductName": "CS6W-555MS", "Qty": 10, "Customer": "คุณวิจิตรา เสือทะเล", "DO": "36DO-690078" },
+            { "Date": "2026-05-16", "ProductName": "CS6W-555MS", "Qty": 10, "Customer": "คุณวิจิตรา เสือทะเล", "DO": "36DO-690079" },
+            { "Date": "2026-05-19", "ProductName": "CS6W-555MS", "Qty": 48, "Customer": "ปริ๊นซ์ เอ็นจิเนียริ่ง", "DO": "36DO-690083" },
+            { "Date": "2026-05-19", "ProductName": "CS7N-705TB-AG (TIT)", "Qty": 2, "Customer": "โซลาร์ พีพีเอ็ม", "DO": "36DO-690081" },
+            { "Date": "2026-05-22", "ProductName": "CS6W-555MS", "Qty": 35, "Customer": "Siam Triangle", "DO": "36DO-690087" },
+            { "Date": "2026-05-22", "ProductName": "CS7N-720TB-AG", "Qty": 132, "Customer": "ไคลเมท เชนจ์ โซลูชั่นส์", "DO": "36DO-690085" },
+            { "Date": "2026-05-27", "ProductName": "CS7N-715TB-AG", "Qty": 92, "Customer": "ซีดีดี เอ็นจิเนียริง แอนด์ ซัพพลาย", "DO": "36DO-690084" },
+            { "Date": "2026-05-29", "ProductName": "CS7N-715TB-AG", "Qty": 14, "Customer": "ซันไรส์ เอ็นเนอยี เทคโนโลยี", "DO": "36DO-690088" },
+            { "Date": "2026-05-29", "ProductName": "CS7N-720TB-AG", "Qty": 11, "Customer": "ดอกเตอร์ เอ็นเนอร์จี", "DO": "36DO-690089" },
+            { "Date": "2026-05-29", "ProductName": "CS7N-720TB-AG", "Qty": 26, "Customer": "สยามวัฒนา", "DO": "36DO-690094" },
+            { "Date": "2026-05-29", "ProductName": "CS6W-555MS", "Qty": 35, "Customer": "เจ ทริปเปิ้ล จี เทคโนโลยี", "DO": "36DO-690091" },
+            { "Date": "2026-05-29", "ProductName": "Huawei DTSU666-H ", "Qty": 1, "Customer": "พลัสมอร์ เอ็นจิเนียริง แอนด์ ซัพพลาย", "DO": "36DO-690092" },
+            { "Date": "2026-05-30", "ProductName": "CS7N-720TB-AG", "Qty": 147, "Customer": "ดอกเตอร์ เอ็นเนอร์จี กรุ๊ป", "DO": "36DO-690090" },
+            
+            
+        ];
+
+        // Global States
+        let currentStockData = JSON.parse(JSON.stringify(DEFAULT_STOCK_DATA));
+        let currentStockIn = JSON.parse(JSON.stringify(DEFAULT_STOCK_IN_HISTORY));
+        let currentStockOut = JSON.parse(JSON.stringify(DEFAULT_STOCK_OUT_HISTORY));
+
+        // Keep pointers to chart instances to recreate/destroy on update
+        let barChartInstance = null;
+        let pieChartInstance = null;
+
+        // --- 2. CUSTOM TOAST NOTIFICATION SYSTEM ---
+        function showNotification(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-emerald-500 text-white';
+            let icon = 'check-circle';
+            if (type === 'error') {
+                bgClass = 'bg-rose-500 text-white';
+                icon = 'alert-triangle';
+            } else if (type === 'info') {
+                bgClass = 'bg-blue-600 text-white';
+                icon = 'info';
+            }
+
+            toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg transform transition-all duration-300 translate-y-2 opacity-0 ${bgClass}`;
+            toast.innerHTML = `
+                <i data-lucide="${icon}" class="w-5 h-5 flex-shrink-0"></i>
+                <span class="text-xs font-semibold">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            // Animate In
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            // Animate Out & Remove
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // --- 3. DARK MODE TOGGLE ---
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            
+            // Re-render charts to update grid/axis font colors if necessary
+            updateCharts();
+            showNotification(isDark ? 'เปิดโหมดมืด (Dark Mode)' : 'เปิดโหมดสว่าง (Light Mode)', 'info');
+        }
+
+        // Initialize theme from storage
+        if (localStorage.getItem('theme') === 'dark' || 
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        // --- 4. SYSTEM LAUNCH & INIT ---
+        window.onload = function() {
+            lucide.createIcons();
+            refreshAllDashboardData();
+        };
+
+        // --- 5. TABS SWITCHING LOGIC ---
+        function switchTab(tabId) {
+            // Hide all tab content
+            document.querySelectorAll('.tab-content').forEach(element => {
+                element.classList.add('hidden');
+            });
+            // Remove active classes from buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800";
+            });
+
+            // Show active tab
+            document.getElementById(`tab-${tabId}-content`).classList.remove('hidden');
+            
+            // Activate button style
+            const activeBtn = document.getElementById(`btn-${tabId}`);
+            if (tabId === 'upload') {
+                activeBtn.className = "nav-btn flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all bg-amber-500 text-white shadow-md shadow-amber-500/10";
+            } else {
+                activeBtn.className = "nav-btn flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all bg-brand-600 text-white shadow-md shadow-brand-500/10";
+            }
+
+            // Ensure charts size properly when showing Dashboard Tab
+            if (tabId === 'dashboard') {
+                setTimeout(updateCharts, 50);
+            }
+        }
+
+        // --- 6. CATEGORY DETECTOR UTILITY ---
+        function guessTypeByProductName(name) {
+            const upper = name.toUpperCase();
+            if (upper.includes('SUNNY') || upper.includes('SUN2000') || upper.includes('INVERTER') || upper.includes('STP50')) {
+                return 'Inverter';
+            } else if (upper.includes('CS7N') || upper.includes('CS7L') || upper.includes('CS6W') || upper.includes('CS3W') || upper.includes('REC410') || upper.includes('REC440')) {
+                return 'Solar Panel';
+            } else {
+                return 'Accessory'; // Default group
+            }
+        }
+
+        // --- 7. PROCESS DATA & RENDER ELEMENTS ---
+        function refreshAllDashboardData() {
+            // Recalculate stats
+            const totalBF = currentStockData.reduce((sum, x) => sum + parseInt(x.BF || 0), 0);
+            const totalIn = currentStockData.reduce((sum, x) => sum + parseInt(x.In || 0), 0);
+            const totalOut = currentStockData.reduce((sum, x) => sum + parseInt(x.Out || 0), 0);
+            const totalBalance = currentStockData.reduce((sum, x) => sum + parseInt(x.Balance || 0), 0);
+
+            // Update KPI cards
+            document.getElementById('kpi-balance').innerText = totalBalance.toLocaleString();
+            document.getElementById('kpi-in').innerText = `+${totalIn.toLocaleString()}`;
+            document.getElementById('kpi-out').innerText = `-${totalOut.toLocaleString()}`;
+            document.getElementById('kpi-bf').innerText = totalBF.toLocaleString();
+
+            const inPercent = totalBF > 0 ? ((totalIn / totalBF) * 100).toFixed(1) : 0;
+            const outPercent = totalBF > 0 ? ((totalOut / totalBF) * 100).toFixed(1) : 0;
+            document.getElementById('kpi-inflow-percent').innerText = `+${inPercent}% รับเข้า`;
+            document.getElementById('kpi-outflow-percent').innerText = `-${outPercent}% จ่ายออก`;
+
+            // Sort logic for spotlights
+            const sortedByBalanceDesc = [...currentStockData].sort((a, b) => b.Balance - a.Balance);
+            const sortedByBalanceAsc = [...currentStockData].filter(x => x.Balance > 0).sort((a, b) => a.Balance - b.Balance);
+
+            // 1. Render Top Available Stocks (มากที่สุด)
+            const topStockContainer = document.getElementById('top-stock-container');
+            topStockContainer.innerHTML = '';
+            sortedByBalanceDesc.slice(0, 3).forEach((item, i) => {
+                const isFirst = i === 0;
+                topStockContainer.innerHTML += `
+                    <div class="p-4 rounded-xl flex items-center justify-between transition-transform hover:scale-[1.01] ${
+                        isFirst ? 'bg-brand-500/5 border border-brand-500/20' : 'bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800'
+                    }">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg flex items-center justify-center font-black ${
+                                isFirst ? 'bg-brand-500 text-white' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                            }">${i + 1}</div>
+                            <div>
+                                <h4 class="font-semibold text-sm line-clamp-1">${item['Product Name']}</h4>
+                                <p class="text-[10px] text-slate-400 uppercase">${item.Type}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-base font-extrabold text-brand-600 dark:text-brand-400">
+                                ${parseInt(item.Balance).toLocaleString()} <span class="text-[10px] font-normal text-slate-400">ชิ้น</span>
+                            </div>
+                            <div class="text-[10px] text-slate-400">
+                                ยกมา: ${item.BF} | เข้า: +${item.In} | ออก: -${item.Out}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // 2. Render Lowest Available Stocks (น้อยที่สุด / เฝ้าระวัง)
+            const lowStockContainer = document.getElementById('low-stock-container');
+            lowStockContainer.innerHTML = '';
+            sortedByBalanceAsc.slice(0, 3).forEach((item, i) => {
+                const isCriticallyLow = parseInt(item.Balance) <= 2;
+                lowStockContainer.innerHTML += `
+                    <div class="p-4 rounded-xl flex items-center justify-between transition-transform hover:scale-[1.01] ${
+                        isCriticallyLow ? 'bg-rose-500/5 border border-rose-500/20' : 'bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800'
+                    }">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg flex items-center justify-center font-black ${
+                                isCriticallyLow ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white'
+                            }">${isCriticallyLow ? '🚨' : '⚠️'}</div>
+                            <div>
+                                <h4 class="font-semibold text-sm line-clamp-1">${item['Product Name']}</h4>
+                                <p class="text-[10px] text-slate-400 uppercase">${item.Type}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-base font-extrabold ${isCriticallyLow ? 'text-rose-600 dark:text-rose-400' : 'text-amber-500'}">
+                                ${parseInt(item.Balance).toLocaleString()} <span class="text-[10px] font-normal text-slate-400">ชิ้น</span>
+                            </div>
+                            <span class="text-[9px] px-2 py-0.5 rounded-full font-bold ${
+                                isCriticallyLow ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200'
+                            }">
+                                ${isCriticallyLow ? 'ต้องสั่งเพิ่ม' : 'ระดับสต๊อกต่ำ'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Render Inventory Table & Logs & Charts
+            buildInventoryTable();
+            buildTransactionsLogs();
+            updateCharts();
+        }
+
+        // --- 8. TABLE RENDER & FILTER LOGIC ---
+        function buildInventoryTable() {
+            const tableBody = document.getElementById('inventory-table-body');
+            tableBody.innerHTML = '';
+
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const categoryFilter = document.getElementById('filter-category').value;
+            const levelFilter = document.getElementById('filter-level').value;
+
+            const filtered = currentStockData.filter(item => {
+                const matchesSearch = item['Product Name'].toLowerCase().includes(searchTerm);
+                const matchesCategory = categoryFilter === 'All' || item.Type === categoryFilter;
+                
+                let matchesLevel = true;
+                const bal = parseInt(item.Balance);
+                if (levelFilter === 'High') matchesLevel = bal >= 2000;
+                if (levelFilter === 'Normal') matchesLevel = bal > 10 && bal < 1000;
+                if (levelFilter === 'Low') matchesLevel = bal <= 2;
+
+                return matchesSearch && matchesCategory && matchesLevel;
+            });
+
+            if (filtered.length > 0) {
+                filtered.forEach(item => {
+                    const isHigh = parseInt(item.Balance) >= 2000;
+                    const isLow = parseInt(item.Balance) <= 2;
+                    
+                    tableBody.innerHTML += `
+                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                            <td class="px-5 py-3.5 font-semibold text-slate-800 dark:text-slate-100">${item['Product Name']}</td>
+                            <td class="px-5 py-3.5 text-xs text-slate-400 uppercase">${item.Type}</td>
+                            <td class="px-5 py-3.5 text-right font-mono">${parseInt(item.BF).toLocaleString()}</td>
+                            <td class="px-5 py-3.5 text-right font-mono text-emerald-500 font-semibold">${item.In > 0 ? '+' + parseInt(item.In).toLocaleString() : '-'}</td>
+                            <td class="px-5 py-3.5 text-right font-mono text-rose-500 font-semibold">${item.Out > 0 ? '-' + parseInt(item.Out).toLocaleString() : '-'}</td>
+                            <td class="px-5 py-3.5 text-right font-mono font-bold text-brand-600 dark:text-brand-400">${parseInt(item.Balance).toLocaleString()}</td>
+                            <td class="px-5 py-3.5 text-center">
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                    isHigh ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' :
+                                    isLow ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200' :
+                                    'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                                }">
+                                    ${isHigh ? 'สินค้ามีมาก' : isLow ? 'ใกล้หมด' : 'ปกติ'}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-5 py-12 text-center text-slate-400">
+                            <i data-lucide="package-search" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>
+                            ไม่พบรายการสินค้าสต๊อกที่ตรงเงื่อนไขการค้นหา
+                        </td>
+                    </tr>
+                `;
+                lucide.createIcons();
+            }
+        }
+
+        function filterStockTable() {
+            buildInventoryTable();
+        }
+
+        // --- 9. TRANSACTION HISTORY LOGS RENDER ---
+        function buildTransactionsLogs() {
+            // Render Stock In logs
+            const inContainer = document.getElementById('stock-in-logs-container');
+            document.getElementById('count-in-logs').innerText = `${currentStockIn.length} รายการ`;
+            inContainer.innerHTML = '';
+
+            if (currentStockIn.length > 0) {
+                currentStockIn.forEach(item => {
+                    inContainer.innerHTML += `
+                        <div class="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30 flex justify-between items-center hover:scale-[1.01] transition-transform">
+                            <div>
+                                <h4 class="font-bold text-xs text-slate-700 dark:text-slate-300">${item.ProductName || item['Product Name']}</h4>
+                                <p class="text-[10px] text-slate-400 mt-1 flex items-center gap-2">
+                                    <span>📅 ${item.Date}</span>
+                                    ${item.LotNo || item['Lot. No.'] ? `<span>• Lot: ${item.LotNo || item['Lot. No.']}</span>` : ''}
+                                </p>
+                                ${item.Remark ? `<p class="text-[10px] text-brand-600 dark:text-brand-400 mt-1">ℹ️ ${item.Remark}</p>` : ''}
+                            </div>
+                            <div class="text-right">
+                                <span class="text-sm font-black text-emerald-500 font-mono">+${parseInt(item.Qty).toLocaleString()}</span>
+                                <span class="text-[9px] text-slate-400 block">ชิ้น</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                inContainer.innerHTML = `<div class="text-center text-slate-400 py-12 text-xs">ไม่มีรายการรับเข้าในระบบ</div>`;
+            }
+
+            // Render Stock Out logs
+            const outContainer = document.getElementById('stock-out-logs-container');
+            document.getElementById('count-out-logs').innerText = `${currentStockOut.length} รายการ`;
+            outContainer.innerHTML = '';
+
+            if (currentStockOut.length > 0) {
+                currentStockOut.forEach(item => {
+                    outContainer.innerHTML += `
+                        <div class="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30 flex justify-between items-center hover:scale-[1.01] transition-transform">
+                            <div>
+                                <h4 class="font-bold text-xs text-slate-700 dark:text-slate-300">${item.ProductName || item['Product Name']}</h4>
+                                <p class="text-[10px] text-slate-400 mt-1 flex flex-wrap items-center gap-x-2">
+                                    <span>📅 ${item.Date}</span>
+                                    <span>• ${item.Customer || 'ไม่ระบุลูกค้า'}</span>
+                                </p>
+                                ${item.DO ? `<p class="text-[10px] text-slate-400 font-mono mt-0.5">ใบจ่ายเลขที่: ${item.DO}</p>` : ''}
+                            </div>
+                            <div class="text-right">
+                                <span class="text-sm font-black text-rose-500 font-mono">-${parseInt(item.Qty).toLocaleString()}</span>
+                                <span class="text-[9px] text-slate-400 block">ชิ้น</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                outContainer.innerHTML = `<div class="text-center text-slate-400 py-12 text-xs">ไม่มีรายการนำออกในระบบ</div>`;
+            }
+        }
+
+        // --- 10. CHARTS RENDER AND ANIMATION (CHART.JS) ---
+        function updateCharts() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? '#334155' : '#e2e8f0';
+            const labelColor = isDark ? '#cbd5e1' : '#475569';
+
+            // --- BAR CHART (Movements) ---
+            const barCtx = document.getElementById('barMovementChart').getContext('2d');
+            
+            // Filter products with substantial stock activities for clarity
+            const barProducts = currentStockData.filter(x => x.Type === 'Solar Panel' && parseInt(x.Balance) > 10);
+            const productNames = barProducts.map(x => x['Product Name']);
+            const bfData = barProducts.map(x => parseInt(x.BF));
+            const inData = barProducts.map(x => parseInt(x.In));
+            const outData = barProducts.map(x => parseInt(x.Out));
+            const balData = barProducts.map(x => parseInt(x.Balance));
+
+            if (barChartInstance) {
+                barChartInstance.destroy();
+            }
+
+            barChartInstance = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: productNames,
+                    datasets: [
+                        { label: 'ยอดยกมา (B/F)', data: bfData, backgroundColor: '#94a3b8', borderRadius: 4 },
+                        { label: 'ยอดรับเข้า (In)', data: inData, backgroundColor: '#10b981', borderRadius: 4 },
+                        { label: 'ยอดจ่ายออก (Out)', data: outData, backgroundColor: '#ef4444', borderRadius: 4 },
+                        { label: 'คงเหลือ (Balance)', data: balData, backgroundColor: '#3b82f6', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: labelColor, font: { family: 'Sarabun' } } }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: gridColor },
+                            ticks: { color: labelColor, font: { family: 'Sarabun', size: 9 } }
+                        },
+                        y: {
+                            grid: { color: gridColor },
+                            ticks: { color: labelColor, font: { family: 'Sarabun' } }
+                        }
+                    }
+                }
+            });
+
+            // --- PIE/DOUGHNUT CHART (Category Split) ---
+            const pieCtx = document.getElementById('pieCategoryChart').getContext('2d');
+            const categorySums = { 'Solar Panel': 0, 'Inverter': 0, 'Accessory': 0 };
+            
+            currentStockData.forEach(item => {
+                categorySums[item.Type] = (categorySums[item.Type] || 0) + parseInt(item.Balance);
+            });
+
+            const totalSum = Object.values(categorySums).reduce((s, a) => s + a, 0);
+
+            if (pieChartInstance) {
+                pieChartInstance.destroy();
+            }
+
+            pieChartInstance = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['แผงโซลาร์เซลล์', 'อินเวอร์เตอร์', 'อุปกรณ์เสริม'],
+                    datasets: [{
+                        data: [categorySums['Solar Panel'], categorySums['Inverter'], categorySums['Accessory']],
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b'],
+                        borderWidth: isDark ? 2 : 1,
+                        borderColor: isDark ? '#0f172a' : '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false } // We render custom HTML legend
+                    },
+                    cutout: '70%'
+                }
+            });
+
+            // Render Custom HTML Legend
+            const legendContainer = document.getElementById('category-legend');
+            legendContainer.innerHTML = '';
+            
+            const legendItems = [
+                { name: 'แผงโซลาร์เซลล์', key: 'Solar Panel', color: '#3b82f6' },
+                { name: 'อินเวอร์เตอร์', key: 'Inverter', color: '#10b981' },
+                { name: 'อุปกรณ์เสริม', key: 'Accessory', color: '#f59e0b' }
+            ];
+
+            legendItems.forEach(item => {
+                const value = categorySums[item.key] || 0;
+                const percent = totalSum > 0 ? ((value / totalSum) * 100).toFixed(1) : 0;
+                legendContainer.innerHTML += `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full" style="background-color: ${item.color}"></div>
+                            <span class="font-medium">${item.name}</span>
+                        </div>
+                        <span class="font-semibold text-slate-500 dark:text-slate-400">
+                            ${value.toLocaleString()} ชิ้น (${percent}%)
+                        </span>
+                    </div>
+                `;
+            });
+        }
+
+        // --- 11. DRAG-DROP & CSV PARSER ENGINE ---
+        function handleFileSelect(type, input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const statusLabel = document.getElementById(`status-${type}`);
+            statusLabel.innerText = "กำลังประมวลผล...";
+            statusLabel.className = "mt-3 px-2.5 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300 text-[10px] rounded-md font-bold";
+
+            Papa.parse(file, {
+                header: false, // Parse as raw row arrays first to find the header index safely
+                skipEmptyLines: true,
+                complete: function(results) {
+                    processParsedCSV(type, results.data);
+                },
+                error: function(err) {
+                    showNotification("เกิดข้อผิดพลาดในการโหลดไฟล์ CSV กรุณาตรวจสอบโครงสร้างไฟล์", "error");
+                    statusLabel.innerText = "เกิดข้อผิดพลาด";
+                    statusLabel.className = "mt-3 px-2.5 py-1 bg-rose-100 text-rose-800 text-[10px] rounded-md font-bold";
+                }
+            });
+        }
+
+        function processParsedCSV(type, rawRows) {
+            // Because our excel exports might have comments or empty spacing on top (Estimated Rows Above Header)
+            // Let's scan to locate where the header row is.
+            let headerRowIndex = -1;
+
+            // Find row containing key headers
+            for (let i = 0; i < rawRows.length; i++) {
+                const rowStr = rawRows[i].map(val => String(val).toLowerCase().trim());
+                // Look for 'product name' (common to all sheets)
+                if (rowStr.includes('product name')) {
+                    headerRowIndex = i;
+                    break;
+                }
+            }
+
+            if (headerRowIndex === -1) {
+                // Fallback: If not found, try to look for any row with similar keys, or assume row 0 or 1
+                headerRowIndex = 0; 
+            }
+
+            // Slice data from the header row onwards
+            const headers = rawRows[headerRowIndex].map(h => String(h).trim());
+            const dataRows = rawRows.slice(headerRowIndex + 1);
+
+            // Parse objects
+            const parsedObjects = dataRows.map(row => {
+                let obj = {};
+                headers.forEach((header, index) => {
+                    if (header) {
+                        obj[header] = row[index] !== undefined ? String(row[index]).trim() : '';
+                    }
+                });
+                return obj;
+            }).filter(obj => obj['Product Name'] && obj['Product Name'] !== '' && obj['Product Name'] !== 'Total' && obj['Product Name'] !== 'SUM');
+
+            // Apply to active states
+            const statusLabel = document.getElementById(`status-${type}`);
+            if (type === 'stock') {
+                currentStockData = parsedObjects.map(obj => {
+                    const bf = parseInt(obj['B/F'] || obj['BF'] || 0);
+                    const inflow = parseInt(obj['In'] || 0);
+                    const outflow = parseInt(obj['Out'] || 0);
+                    const balance = parseInt(obj['Balance'] || (bf + inflow - outflow));
+                    return {
+                        "Product Name": obj['Product Name'],
+                        "BF": bf,
+                        "In": inflow,
+                        "Out": outflow,
+                        "Balance": balance,
+                        "Type": guessTypeByProductName(obj['Product Name'])
+                    };
+                });
+                statusLabel.innerText = `อัปโหลดสำเร็จ (${currentStockData.length} แถว)`;
+                statusLabel.className = "mt-3 px-2.5 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] rounded-md font-bold";
+                document.getElementById('header-badge').innerText = "ข้อมูลของคุณเอง";
+                showNotification("นำเข้าข้อมูลสต๊อกคงเหลือสำเร็จ!", "success");
+            } else if (type === 'in') {
+                currentStockIn = parsedObjects.map(obj => {
+                    return {
+                        "Date": obj['Date'] || 'ไม่ระบุ',
+                        "ProductName": obj['Product Name'] || 'ไม่ระบุสินค้า',
+                        "LotNo": obj['Lot. No.'] || obj['Lot No'] || '-',
+                        "Qty": parseInt(obj['Qty'] || 0),
+                        "Remark": obj['Remark'] || ''
+                    };
+                });
+                statusLabel.innerText = `อัปโหลดสำเร็จ (${currentStockIn.length} รายการ)`;
+                statusLabel.className = "mt-3 px-2.5 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] rounded-md font-bold";
+                showNotification("นำเข้าประวัติรับเข้าคลังสินค้าสำเร็จ!", "success");
+            } else if (type === 'out') {
+                currentStockOut = parsedObjects.map(obj => {
+                    return {
+                        "Date": obj['Date'] || 'ไม่ระบุ',
+                        "ProductName": obj['Product Name'] || 'ไม่ระบุสินค้า',
+                        "Qty": parseInt(obj['Qty'] || 0),
+                        "Customer": obj['Customer'] || 'ไม่ระบุลูกค้า',
+                        "DO": obj['DO'] || ''
+                    };
+                });
+                statusLabel.innerText = `อัปโหลดสำเร็จ (${currentStockOut.length} รายการ)`;
+                statusLabel.className = "mt-3 px-2.5 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] rounded-md font-bold";
+                showNotification("นำเข้าประวัติจ่ายออกสำเร็จ!", "success");
+            }
+
+            // Sync metrics and recreate visualisations
+            refreshAllDashboardData();
+        }
+
+        // Reset system to pristine state
+        function resetToDefaultData() {
+            currentStockData = JSON.parse(JSON.stringify(DEFAULT_STOCK_DATA));
+            currentStockIn = JSON.parse(JSON.stringify(DEFAULT_STOCK_IN_HISTORY));
+            currentStockOut = JSON.parse(JSON.stringify(DEFAULT_STOCK_OUT_HISTORY));
+
+            // Reset indicators labels
+            document.querySelectorAll("[id^='status-']").forEach(label => {
+                label.innerText = "ข้อมูลตั้งต้นถูกโหลดอยู่";
+                label.className = "mt-3 px-2.5 py-1 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-[10px] rounded-md font-bold";
+            });
+
+            // Reset files inputs
+            document.getElementById('file-stock').value = "";
+            document.getElementById('file-in').value = "";
+            document.getElementById('file-out').value = "";
+            
+            document.getElementById('header-badge').innerText = "พฤษภาคม 2026 (ค่าเริ่มต้น)";
+
+            refreshAllDashboardData();
+            showNotification("ล้างค่าสต๊อกและกลับไปใช้ข้อมูลค่าเริ่มต้นของโครงการแล้ว", "info");
+        }
+    </script>
+</body>
+</html>
