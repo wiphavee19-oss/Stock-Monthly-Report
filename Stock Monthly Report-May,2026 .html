@@ -67,7 +67,8 @@
                 <div>
                     <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">
                         Monthly Stock Report
-                        <span id="header-badge" class="text-xs font-normal px-2.5 py-1 bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-300 rounded-full">
+                        <!-- ปรับปรุงระดับสีและความสว่างเพื่อให้ออกชัดเจนมากที่สุด -->
+                        <span id="header-badge" class="text-xs font-bold px-3 py-1 bg-brand-600 text-white dark:bg-brand-500 dark:text-slate-950 rounded-full shadow-sm transition-all border border-brand-700/10 dark:border-brand-400/20">
                             ข้อมูลเดือน พฤษภาคม 2026
                         </span>
                     </h1>
@@ -110,7 +111,7 @@
                 </button>
             </div>
 
-            <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-2 sm:mt-0">
+            <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-2 sm:mt-0 font-bold">
                 <i data-lucide="calendar" class="w-4 h-4"></i>
                 <span id="current-date">สถานะ: แสดงข้อมูลประจำเดือน พฤษภาคม 2026</span>
             </div>
@@ -272,7 +273,7 @@
                             <!-- Alert Level Filter -->
                             <select id="filter-level" onchange="filterStockTable()" class="px-3 py-2 text-xs rounded-lg border bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 outline-none">
                                 <option value="All">ทุกสถานะ</option>
-                                <option value="High">สินค้ามีมาก (&ge; 3000 ชิ้น)</option>
+                                <option value="High">สินค้ามีมาก (&ge; 2000 ชิ้น)</option>
                                 <option value="Normal">ปกติ</option>
                                 <option value="Low Stock">สั่งเพิ่ม (&le; 5 ชิ้น)</option>
                             </select>
@@ -309,7 +310,7 @@
                 <div class="p-6 rounded-2xl border bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
-                            <div class="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg">
+                            <div class="p-2 bg-emerald-500/10 text-emerald-600 rounded-lg">
                                 <i data-lucide="arrow-up-right"></i>
                             </div>
                             <div>
@@ -356,20 +357,20 @@
                         </div>
                         <div>
                             <h2 class="text-lg font-bold">📂 คู่มือการอัปโหลดไฟล์รายงาน .CSV เพื่ออัปเดตข้อมูล</h2>
-                            <p class="text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                            <p class="text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed font-semibold">
                                 แดชบอร์ดนี้ทำขึ้นเพื่อแสดงผลข้อมูลคลังสินค้าโดยตรงจากไฟล์ รายงานสต๊อกประจำเดือน 
                                 คุณสามารถดึงไฟล์ <strong>.CSV</strong> ที่แชร์จาก Excel/Sheets แล้วอัปโหลดเข้ามาเพื่อดูสถิติใหม่ได้โดยตรง ข้อมูลทุกอย่างจะได้รับการประมวลผลบนเครื่องของคุณอย่างปลอดภัย (ไม่มีการบันทึกกลับไปยังคลาวด์ภายนอก)
                             </p>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                                <div class="bg-white/80 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                                <div class="bg-white/90 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
                                     <span class="font-bold text-blue-600">1. ไฟล์ Stockหลัก.csv</span>
                                     <p class="text-slate-500 mt-1">ต้องมีหัวข้อคอลัมน์ชื่อ <code>Product Name</code>, <code>B/F</code>, <code>In</code>, <code>Out</code>, <code>Balance</code></p>
                                 </div>
-                                <div class="bg-white/80 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                                <div class="bg-white/90 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
                                     <span class="font-bold text-emerald-600">2. ไฟล์ Stock In (รับเข้า).csv</span>
                                     <p class="text-slate-500 mt-1">ต้องมีคอลัมน์ <code>Date</code>, <code>Product Name</code>, <code>Qty</code> และ <code>Lot. No.</code></p>
                                 </div>
-                                <div class="bg-white/80 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                                <div class="bg-white/90 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
                                     <span class="font-bold text-rose-600">3. ไฟล์ Stock Out (จ่ายออก).csv</span>
                                     <p class="text-slate-500 mt-1">ต้องมีคอลัมน์ <code>Date</code>, <code>Product Name</code>, <code>Qty</code>, <code>Customer</code>, <code>DO</code></p>
                                 </div>
@@ -499,9 +500,7 @@
             { "Date": "2026-05-29", "ProductName": "CS7N-720TB-AG", "Qty": 26, "Customer": "สยามวัฒนา", "DO": "36DO-690094" },
             { "Date": "2026-05-29", "ProductName": "CS6W-555MS", "Qty": 35, "Customer": "เจ ทริปเปิ้ล จี เทคโนโลยี", "DO": "36DO-690091" },
             { "Date": "2026-05-29", "ProductName": "Huawei DTSU666-H ", "Qty": 1, "Customer": "พลัสมอร์ เอ็นจิเนียริง แอนด์ ซัพพลาย", "DO": "36DO-690092" },
-            { "Date": "2026-05-30", "ProductName": "CS7N-720TB-AG", "Qty": 147, "Customer": "ดอกเตอร์ เอ็นเนอร์จี กรุ๊ป", "DO": "36DO-690090" },
-            
-            
+            { "Date": "2026-05-30", "ProductName": "CS7N-720TB-AG", "Qty": 147, "Customer": "ดอกเตอร์ เอ็นเนอร์จี กรุ๊ป", "DO": "36DO-690090" }
         ];
 
         // Global States
@@ -720,7 +719,7 @@
                 const bal = parseInt(item.Balance);
                 if (levelFilter === 'High') matchesLevel = bal >= 2000;
                 if (levelFilter === 'Normal') matchesLevel = bal > 10 && bal < 1000;
-                if (levelFilter === 'Low') matchesLevel = bal <= 2;
+                if (levelFilter === 'Low Stock') matchesLevel = bal <= 5;
 
                 return matchesSearch && matchesCategory && matchesLevel;
             });
@@ -728,7 +727,7 @@
             if (filtered.length > 0) {
                 filtered.forEach(item => {
                     const isHigh = parseInt(item.Balance) >= 2000;
-                    const isLow = parseInt(item.Balance) <= 2;
+                    const isLow = parseInt(item.Balance) <= 5;
                     
                     tableBody.innerHTML += `
                         <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
@@ -826,7 +825,7 @@
             }
         }
 
-        // --- 10. CHARTS RENDER AND ANIMATION (CHART.JS) ---
+        // --- 11. CHARTS RENDER AND ANIMATION (CHART.JS) ---
         function updateCharts() {
             const isDark = document.documentElement.classList.contains('dark');
             const gridColor = isDark ? '#334155' : '#e2e8f0';
